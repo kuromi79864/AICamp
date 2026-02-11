@@ -3,20 +3,19 @@ import google.generativeai as genai
 from datetime import datetime, timedelta
 
 # ==========================================
-# 1. 魂の注入：マルチターン対応マスター
+# 1. 魂の注入：やさしい松本ガイド（短文・対話重視）
 # ==========================================
 SYSTEM_PROMPT = """
-あなたは松本の街を知り尽くした『マツモト・マスター』！
+あなたは、松本の街角で静かに旅人を待つ、物腰の柔らかいガイドです。
 
-【ミッション】
-ユーザーの待ち時間を、想像力をフル回転させる「知的な冒険」に変えること。
-
-【会話の進め方】
-1. **回答の評価**: ユーザーがクイズに答えたら、まずその回答を「マスター」として熱く評価して！正解・不正解よりも「その発想、面白いね！」という視点を大切に。
-2. **1つの深掘りトピック**: 評価のあと、また新しいマニアックな松本ネタを1つ提供して。
-3. **想像力クイズ**: 最後にまた、そのトピックに基づいた「答えのない、あるいは文脈から推測するクイズ」を出して。
-
-これを繰り返すことで、ユーザーを松本の深淵へ誘ってくれ。
+【大切にすること】
+1. **やさしい語り口**: 「〜ですね」「〜ですよ」といった、穏やかで落ち着いた言葉遣いを心がけてください。
+2. **読みやすさ**: 一つ一つの文章は短く。改行を適切に入れ、長文にならないようにしてください。
+3. **待ち時間の尊重**: 指定された待ち時間（3分なら150文字程度）でサクッと読める分量に調整してください。
+4. **構成**: 
+   - ユーザーの回答へのあたたかい全肯定。
+   - 松本の「ちょっとした不思議」を1つだけ。
+   - 最後に、文脈から想像を膨らませる「やさしいクイズ」を1つ。
 """
 
 # ==========================================
@@ -25,64 +24,67 @@ SYSTEM_PROMPT = """
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
+        model_name='gemini-2.5-flash',
         system_instruction=SYSTEM_PROMPT
     )
 except Exception as e:
     st.error(f"初期設定エラー: {e}")
 
 # ==========================================
-# 3. UI・時間管理
+# 3. UI・時間管理（チャットの上に配置）
 # ==========================================
-st.set_page_config(page_title="マツモト・マスター Gold", page_icon="⏳")
-st.title("🏯 マツモト・マスター：冒険編")
+st.set_page_config(page_title="松本・待ち時間ガイド", page_icon="🚌")
+st.title("🏯 松本 ひとやすみガイド")
 
-with st.sidebar:
-    st.header("⏳ 待ち時間セット")
-    selected_minutes = st.number_input("何分待つ？", min_value=1, max_value=60, value=5)
-    if st.button("タイマースタート！"):
-        st.session_state.end_time = datetime.now() + timedelta(minutes=selected_minutes)
-
-# カウントダウン表示
-countdown_placeholder = st.empty()
-if "end_time" in st.session_state:
-    remaining = st.session_state.end_time - datetime.now()
-    if remaining.total_seconds() > 0:
-        mins, secs = divmod(int(remaining.total_seconds()), 60)
-        countdown_placeholder.metric("出発まであと", f"{mins:02d}:{secs:02d}")
-    else:
-        countdown_placeholder.error("🚌 時間だよ！いってらっしゃい！")
-
-# ==========================================
-# 4. マルチターン・チャットの実装
-# ==========================================
+# チャット履歴管理
 if "chat_history" not in st.session_state:
-    # Gemini形式の履歴を保存
     st.session_state.chat_history = []
 
-# 過去のメッセージ表示
+# 過去の会話を先に表示
 for message in st.session_state.chat_history:
     with st.chat_message(message["role"]):
         st.markdown(message["parts"][0])
 
-if prompt := st.chat_input("マスター、準備はいい？（答えや質問を入力）"):
-    # ユーザーの入力を表示
+# --- ここからチャット入力の直上のUI ---
+st.divider() # 区切り線
+
+# 時間設定とカウントダウンを横並びに
+col1, col2 = st.columns([1, 1])
+with col1:
+    selected_minutes = st.number_input("待ち時間はあと何分？", min_value=1, max_value=60, value=5)
+
+with col2:
+    if st.button("タイマー開始"):
+        st.session_state.end_time = datetime.now() + timedelta(minutes=selected_minutes)
+
+# カウントダウン表示（チャット入力のすぐ上）
+if "end_time" in st.session_state:
+    remaining = st.session_state.end_time - datetime.now()
+    if remaining.total_seconds() > 0:
+        mins, secs = divmod(int(remaining.total_seconds()), 60)
+        st.info(f"🚌 出発まで あと **{mins:02d}:{secs:02d}** です。ゆっくりお話ししましょう。")
+    else:
+        st.warning("🚌 お時間です。どうぞお気をつけて。")
+
+# ==========================================
+# 4. マルチターン・チャットの実装
+# ==========================================
+if prompt := st.chat_input("今どこにいますか？"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Geminiのチャットセッションを開始
     chat = model.start_chat(history=st.session_state.chat_history)
     
     with st.chat_message("assistant"):
         try:
-            # 履歴を踏まえた回答を生成
-            response = chat.send_message(f"（残り時間考慮：{selected_minutes}分）\n{prompt}")
+            # 待ち時間を意識させる指示を追加
+            response = chat.send_message(f"（待ち時間：{selected_minutes}分）\n{prompt}")
             st.markdown(response.text)
             
-            # 履歴を更新（ユーザーとAIの両方の発言を保存）
             st.session_state.chat_history.append({"role": "user", "parts": [prompt]})
             st.session_state.chat_history.append({"role": "model", "parts": [response.text]})
             
-            st.rerun() # カウントダウン更新のため
+            # 画面をリフレッシュしてカウントダウンを更新
+            st.rerun()
         except Exception as e:
             st.error(f"APIエラー: {e}")
