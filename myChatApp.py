@@ -21,7 +21,7 @@ SYSTEM_PROMPT = """
 3. **想像力クイズ**: 最後に必ず、そのお話に関連した「当時の人の気持ち」や「街の風景の移り変わり」を想像させるクイズを出してね。
 
 【出発の促し】
-・残り時間が1分を切ったら、文末に必ず「そろそろ出発の時間だね。忘れ物はないかな？ヤッホー、いってらっしゃい！」と優しく声をかけてね。
+・残り時間が1分を切ったら、文末に必ず「そろそろ出発の時間だね。忘れ物はないかな？いってらっしゃい！」と優しく声をかけてね。
 """
 
 # ==========================================
@@ -32,7 +32,7 @@ try:
     model = genai.GenerativeModel(
         model_name='gemini-3-flash-preview',
         system_instruction=SYSTEM_PROMPT,
-        tools=[{"google_search": {}}]
+        tools=[{"Google Search_retrieval": {}}]
     )
 except Exception as e:
     st.error(f"初期設定エラーだよ: {e}")
@@ -40,10 +40,10 @@ except Exception as e:
 # ==========================================
 # 3. UI配置
 # ==========================================
-st.set_page_config(page_title="アルプちゃんの待ち時間ガイド", page_icon="🏔️")
+st.set_page_config(page_title="待ち時間ガイド", page_icon="🏔️")
 
 # --- (A) 一番上の設定エリア ---
-st.title("🏔️ アルプちゃんと松本さんぽ")
+st.title("待ち時間ガイド")
 with st.container():
     col1, col2 = st.columns([2, 1])
     with col1:
