@@ -17,7 +17,7 @@ SYSTEM_PROMPT = """
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash',
+        model_name='gemini-3-flash-preview',
         system_instruction=SYSTEM_PROMPT,
         tools=[{"google_search_retrieval": {}}]
     )
