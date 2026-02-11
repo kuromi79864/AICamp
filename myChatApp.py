@@ -26,9 +26,9 @@ SYSTEM_PROMPT = """あなたは、長野県松本市の歴史、文化、そし�
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     model = genai.GenerativeModel(
-        model_name='gemini-2.5-flash-lite', 
+        model_name='gemini-3-flash-previewge', 
         system_instruction=SYSTEM_PROMPT,
-        tools=[{"google_search": {}}] # 正しいフィールド名です
+        tools=[{"google_search_retrieval": {}}] # 正しいフィールド名です
     )
 except Exception as e:
     st.error(f"システム設定エラー: {e}")
@@ -39,7 +39,7 @@ except Exception as e:
 st.set_page_config(page_title="待ち時間ガイド", page_icon="⌛")
 
 st.title("⌛ 待ち時間ガイド")
-st.caption("松本の街の深みを再発見する、知的なひとときを。")
+st.caption("松本の街の深みを再発見する。")
 
 # --- (A) 一番上の設定エリア（ここもFragment外でOK） ---
 selected_minutes = st.number_input("待ち時間はあと何分ですか？", min_value=1, max_value=60, value=5)
