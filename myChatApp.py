@@ -19,7 +19,7 @@ try:
     model = genai.GenerativeModel(
         model_name='gemini-2.5-flash-lite',
         system_instruction=SYSTEM_PROMPT,
-        tools=[{"google_search_retrieval": {}}]
+        tools=[{"google_search": {}}]
     )
 except Exception as e:
     st.error(f"システム設定エラー: {e}")
