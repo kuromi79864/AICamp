@@ -21,7 +21,7 @@ try:
     
     # モデル設定（システム指示をここで注入！）
     model = genai.GenerativeModel(
-        model_name='gemini-1.5-flash', # 無料枠で最も安定しているモデル
+        model_name='gemini-3-flash-preview', # 無料枠で最も安定しているモデル
         system_instruction=SYSTEM_PROMPT
     )
 except Exception as e:
