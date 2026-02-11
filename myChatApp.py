@@ -28,7 +28,7 @@ try:
     model = genai.GenerativeModel(
         model_name='gemini-3-flash-preview', 
         system_instruction=SYSTEM_PROMPT,
-        tools=[{"google_search_retrieval": {}}] # 正しいフィールド名です
+#        tools=[{"google_search_retrieval": {}}] # 正しいフィールド名です
     )
 except Exception as e:
     st.error(f"システム設定エラー: {e}")
