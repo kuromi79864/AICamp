@@ -1,5 +1,6 @@
+from google import genai
+from google.genai import types
 import streamlit as st
-import google.generativeai as genai
 from datetime import datetime, timedelta
 import time
 
@@ -31,13 +32,34 @@ SYSTEM_PROMPT = """あなたは、長野県松本市の歴史、文化、そし�
 # 2. API設定
 # ==========================================
 try:
-    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-    # 検索機能が最も安定している 2.0 Flash を使用
-    model = genai.GenerativeModel(
-        model_name='gemini-2.5-flash', 
-        system_instruction=SYSTEM_PROMPT,
-        tools=[{"GoogleSearch()": {}}] # 最新の検索ツール定義
+    # 1. クライアントの初期化 (新しいSDKでは Client を使用します)
+    client = genai.Client(api_key=st.secrets["GEMINI_API_KEY"])
+
+    # 2. Google検索ツールの定義
+    # ドキュメントにある通り types.Tool と types.GoogleSearch を使用します
+    google_search_tool = types.Tool(
+        google_search=types.GoogleSearch()
     )
+
+    # 3. 設定オブジェクトの作成
+    # システムプロンプトやツール定義はここ（config）にまとめます
+    conf = types.GenerateContentConfig(
+        system_instruction=SYSTEM_PROMPT,
+        tools=[google_search_tool],
+        # 必要に応じて検索のしきい値などを設定可能
+        # google_search_retrieval=... (旧モデルの場合)
+    )
+
+    # 参考: 実際に生成を行う際は以下のように呼び出します
+    # response = client.models.generate_content(
+    #     model='gemini-2.0-flash', # または 'gemini-2.5-flash'
+    #     contents='検索したい内容',
+    #     config=conf
+    # )
+
+    # ストリームリット用に設定完了を表示（またはモデルIDを保持など）
+    # st.success("Gemini 2.0 Flash (with Search) 設定完了")
+
 except Exception as e:
     st.error(f"システム設定エラー: {e}")
 
