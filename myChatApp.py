@@ -36,7 +36,7 @@ try:
     model = genai.GenerativeModel(
         model_name='gemini-2.5-flash', 
         system_instruction=SYSTEM_PROMPT,
-        tools=[{"GoogleSearch": {}}] # 最新の検索ツール定義
+#        tools=[{"GoogleSearch": {}}] # 最新の検索ツール定義
     )
 except Exception as e:
     st.error(f"システム設定エラー: {e}")
