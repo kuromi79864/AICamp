@@ -34,9 +34,9 @@ try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
     # 検索機能が最も安定している 2.0 Flash を使用
     model = genai.GenerativeModel(
-        model_name='gemini-3-flash-preview', 
+        model_name='gemini-2.5-flash', 
         system_instruction=SYSTEM_PROMPT,
-#        tools=[{"google_search_retrieval": {}}] # 最新の検索ツール定義
+        tools=[{"google_search_retrieval": {}}] # 最新の検索ツール定義
     )
 except Exception as e:
     st.error(f"システム設定エラー: {e}")
