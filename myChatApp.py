@@ -4,7 +4,7 @@ from datetime import datetime, timedelta
 import time
 
 # ==========================================
-# 1. 魂の注入：地域ガイド（知的な案内人）
+# 1. 地域ガイド
 # ==========================================
 SYSTEM_PROMPT = """あなたは、長野県松本市の歴史、文化、そして日常の美しさに精通した「地域ガイド」です。
 バスや電車の待ち時間を、街への愛着が深まるひとときに変えるのがあなたの役割です。
@@ -16,32 +16,34 @@ SYSTEM_PROMPT = """あなたは、長野県松本市の歴史、文化、そし�
 
 【構成とクイズ】
 ・回答は読みやすく簡潔に。
-・最後に必ず、その話題に基づいた「当時の背景や風景を想像させるクイズ」を1つ出してください。
+・1回あたりの回答は1分以内で読める分量に。
+・最後に必ず、その話題に基づいた「当時の背景や風景を想像させるクイズ」を1つ出してユーザから答えをもらってください。
+・クイズに対して答えが返答されたら、回答を評価し、次の話題を続けてください。
 ・残り1分を切ったら、必ず「そろそろ出発の時間です。お忘れ物のないよう、お気をつけて」と一言添えてください。
 """
 
 # ==========================================
-# 2. API設定（Gemini 2.5 Flash Lite + 検索ツール）
+# 2. API設定
 # ==========================================
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    # 検索機能が最も安定している 2.0 Flash を使用
     model = genai.GenerativeModel(
-        model_name='gemini-3-flash-preview', 
+        model_name='gemini-2.0-flash', 
         system_instruction=SYSTEM_PROMPT,
-#        tools=[{"google_search_retrieval": {}}] # 正しいフィールド名です
+        tools=[{"google_search_retrieval": {}}] # 最新の検索ツール定義
     )
 except Exception as e:
     st.error(f"システム設定エラー: {e}")
 
 # ==========================================
-# 3. UI配置：メッセージ履歴 -> タイマー -> 入力欄
+# 3. UI配置
 # ==========================================
 st.set_page_config(page_title="待ち時間ガイド", page_icon="⌛")
 
 st.title("⌛ 待ち時間ガイド")
 st.caption("松本の街の深みを再発見する。")
 
-# --- (A) 一番上の設定エリア（ここもFragment外でOK） ---
 selected_minutes = st.number_input("待ち時間はあと何分ですか？", min_value=1, max_value=60, value=5)
 if st.button("タイマーを開始する"):
     st.session_state.end_time = datetime.now() + timedelta(minutes=selected_minutes)
@@ -50,38 +52,34 @@ if st.button("タイマーを開始する"):
 if "chat_history" not in st.session_state:
     st.session_state.chat_history = []
 
-# スクロール可能なメッセージエリア
 chat_container = st.container()
 with chat_container:
     for message in st.session_state.chat_history:
         with st.chat_message(message["role"]):
             st.markdown(message["parts"][0])
 
-# --- (C) 【重要】チャットの下に配置するカウントダウン（Fragment） ---
+# --- (C) カウントダウン（Fragment） ---
 @st.fragment(run_every="1s")
 def bottom_countdown():
     if "end_time" in st.session_state:
-        st.divider() # メッセージとタイマーの境界線
+        st.divider()
         remaining = st.session_state.end_time - datetime.now()
         seconds_left = int(remaining.total_seconds())
-        
         if seconds_left > 0:
             mins, secs = divmod(seconds_left, 60)
             if seconds_left <= 60:
-                st.error(f"⚠️ **出発まで あと {mins:02d}:{secs:02d}**（そろそろ準備を整えましょう）")
+                st.error(f"⚠️ **出発まで あと {mins:02d}:{secs:02d}**")
             else:
                 st.info(f"⌛ **出発まで あと {mins:02d}:{secs:02d}** です。")
         else:
-            st.warning("🚌 お時間です。忘れ物はないですか？お気をつけていってらっしゃいませ。")
+            st.warning("🚌 お時間です。いってらっしゃいませ。")
 
-# タイマーをチャットのすぐ下に表示
 bottom_countdown()
 
 # ==========================================
 # 4. チャット入力・実行
 # ==========================================
-if prompt := st.chat_input("今、どこにいらっしゃいますか？"):
-    # ユーザー入力を表示
+if prompt := st.chat_input("今、どのあたりにいらっしゃいますか？"):
     st.session_state.chat_history.append({"role": "user", "parts": [prompt]})
     with chat_container:
         with st.chat_message("user"):
@@ -89,24 +87,26 @@ if prompt := st.chat_input("今、どこにいらっしゃいますか？"):
 
     with chat_container:
         with st.chat_message("assistant"):
-            # 回答待ちの「ゴマかし」演出
+            # 1. 処理中の演出
+            full_response = ""
             with st.status("松本の情報を確認しています...", expanded=True) as status:
-                st.write("地域の文献を調査中...")
+                st.write("地域の文献や最新情報を検索中...")
                 try:
                     chat = model.start_chat(history=st.session_state.chat_history)
                     
                     time_info = ""
                     if "end_time" in st.session_state and (st.session_state.end_time - datetime.now()).total_seconds() <= 60:
-                        time_info = "【残り1分未満：出発を促してください】"
+                        time_info = "【重要：残り1分未満】"
                     
-                    response = chat.send_message(f"{time_info}（現在の設定：{selected_minutes}分）\n{prompt}")
+                    response = chat.send_message(f"{time_info} {prompt}")
+                    full_response = response.text
                     
                     status.update(label="確認が完了しました！", state="complete", expanded=False)
-                    st.markdown(response.text)
-                    
-                    # 履歴保存
-                    st.session_state.chat_history.append({"role": "model", "parts": [response.text]})
-                    
                 except Exception as e:
                     status.update(label="エラーが発生しました", state="error")
-                    st.error(f"申し訳ありません。接続がうまくいきませんでした。: {e}")
+                    st.error(f"接続失敗: {e}")
+
+            # 2. 回答をボックスの外に表示（これで「開かないと読めない」を解消！）
+            if full_response:
+                st.markdown(full_response)
+                st.session_state.chat_history.append({"role": "model", "parts": [full_response]})
